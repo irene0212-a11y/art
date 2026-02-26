@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>滑鼠互動流光粒子 (p5.js)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* 隱藏捲軸，避免畫布大於視窗時出現捲動條 */
+            background-color: #000; /* 預設背景黑色 */
+        }
+        canvas {
+            display: block; /* 移除 canvas 預設的邊距 */
+        }
+    </style>
+</head>
+<body>
+
+<script>
+    // --- p5.js 程式碼開始 ---
+
+    let particles = [];
+    const numParticles = 300; // 粒子數量
+
+    function setup() {
+        createCanvas(windowWidth, windowHeight);
+        colorMode(HSB, 360, 100, 100, 100); // HSB 模式：色相, 飽和度, 亮度, 透明度
+        noStroke();
+        
+        // 初始化粒子
+        for (let i = 0; i < numParticles; i++) {
+            particles.push(new Particle());
+        }
+    }
+
+    function draw() {
+        // 背景設定透明度 10/100，產生拖尾殘影效果
+        background(0, 0, 0, 10); 
+        
+        // 啟用 ADD 混合模式，讓重疊的粒子產生發光感
+        blendMode(ADD);
+
+        for (let p of particles) {
+            p.update();
+            p.show();
+            p.interact(); // 呼叫互動偵測
+        }
+        
+        // 繪製完畢後重置混合模式，確保下一次背景繪製正常
+        blendMode(BLEND);
+    }
+
+    // 當瀏覽器視窗大小改變時，重新調整畫布大小
+    function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
+    }
+
+    // --- 粒子類別 (Class) ---
+    class Particle {
+        constructor() {
+            this.pos = createVector(random(width), random(height)); // 隨機位置
+            this.vel = p5.Vector.random2D().mult(random(0.5, 2));   // 隨機方向與速度
+            this.acc = createVector(0, 0);                          // 加速度
+            this.size = random(2, 6);                               // 隨機大小
+            this.maxSpeed = 5;                                      // 最大速度限制
+            this.hue = random(360);                                 // 初始顏色
+        }
+
+        // 處理與滑鼠的互動
+        interact() {
+            let mouse = createVector(mouseX, mouseY);
+            let dir = p5.Vector.sub(mouse, this.pos); // 計算粒子指向滑鼠的向量
+            let d = dir.mag(); // 計算距離
+
+            // 如果滑鼠在 300 像素範圍內，粒子受到吸引
+            if (d < 300) {
+                dir.setMag(0.5); // 設定吸引力大小 (數值越大吸力越強)
+                this.acc.add(dir);
+            }
+        }
+
+        update() {
+            this.vel.add(this.acc);
+            this.vel.limit(this.maxSpeed);
+            this.pos.add(this.vel);
+            this.acc.mult(0); // 每一幀重置加速度
+
+            // 邊界檢查：超出畫面時從對面出現 (循環世界)
+            if (this.pos.x > width) this.pos.x = 0;
+            if (this.pos.x < 0) this.pos.x = width;
+            if (this.pos.y > height) this.pos.y = 0;
+            if (this.pos.y < 0) this.pos.y = height;
+            
+            // 根據速度動態改變顏色
+            this.hue = (this.hue + this.vel.mag() * 2) % 360;
+        }
+
+        show() {
+            // 速度越快，亮度越高
+            let brightness = map(this.vel.mag(), 0, this.maxSpeed, 50, 100);
+            fill(this.hue, 80, brightness, 50); 
+            ellipse(this.pos.x, this.pos.y, this.size);
+        }
+    }
+    // --- p5.js 程式碼結束 ---
+</script>
+
+</body>
+</html>
